@@ -20,13 +20,15 @@ cookie14 = u'skin=noskin; session-id=138-2565905-6614804; session-id-time=208278
 
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:53.0) Gecko/20100101 Firefox/53.0',
+    'X-Forwarded-For': '::ffff:' + str(random.randint(11, 170)) + u'.' + str(random.randint(1, 254)) + u'.' + str(random.randint(1, 254)) + u'.' + str(random.randint(1, 254)),
+    'X-Forwarded-Protocol': '',
     'Cookie':u'cookie' + str(random.randint(1, 14)),
 }
 
 db_path = os.path.join(os.getcwd(), 'Amazon.db')
 
 
-def insert_product_details( title, star, asin, best_seller_ranker, price, product_url):
+def insert_product_details(brand, title, star, reviews, answers_questions_url, asin, best_seller_ranker, price, product_url):
     conn = sqlite3.connect(db_path)
     sql_insert = '''
     INSERT INTO
@@ -93,9 +95,11 @@ def select(option):
     if option == 'select1':
         sql = '''
         SELECT
-            product_url, category_path, product_name
+            product_url, category_path, product_name, id
         FROM
             product_list
+        WHERE
+            deal_with is null
         '''
         cursor = conn.execute(sql)
         all_result = cursor.fetchall()
@@ -117,8 +121,7 @@ def cached_url(dictionary_name, url, i):  # 把网页下载下来，目录和明
 
 def detail_from_url(dictionary_name, url, category_path, product_name):
     try:
-        # page = cached_url(dictionary_name, url, category_path, product_name)
-        page = requests.get(url).content
+        page = cached_url(dictionary_name, url, category_path, product_name)
         root = html.fromstring(page)
         brand = root.xpath('//a[@id="brand"]')
         title = product_name
@@ -153,7 +156,7 @@ def detail_from_url(dictionary_name, url, category_path, product_name):
             price = price[0].strip()
         else:
             price = None
-        # insert_product_details2(title, star, asin, best_seller_rank, price, url)
+        insert_product_details2(title, star, asin, best_seller_rank, price, url)
     except Exception as e:
         Log.log('detail', e)
         Log.log('details', url)
@@ -162,21 +165,18 @@ def detail_from_url(dictionary_name, url, category_path, product_name):
 
 def main():
     product_information = select('select1')
-    i = 1
     for p in product_information:
-        product_url, category_path, product_name = p
-        # print(product_url, category_path+product_name)
-        try:
-            # detail_from_url('product_detail', product_url, category_path, product_name)
-            cached_url('product_detail', product_url, str(i))
-        except Exception as e:
-            Log.log('main:', e)
-            Log.log('main_detail:', product_url)
-            insert_error(product_url)
-            pass
-        sleep(random.randint(2, 11))
-        i = i + 1
-
+        product_url, category_path, product_name, id = p
+        print(product_url, category_path+product_name, str(id))
+        # try:
+        #     # detail_from_url('product_detail', product_url, category_path, product_name)
+        #     cached_url('product_detail', product_url, str(id))
+        # except Exception as e:
+        #     Log.log('main:', e)
+        #     Log.log('main_detail:', product_url)
+        #     insert_error(product_url)
+        #     pass
+        # sleep(random.randint(2, 11))
 
 if __name__ == '__main__':
     main()

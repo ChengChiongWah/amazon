@@ -18,8 +18,12 @@ cookie12 = u'skin=noskin; session-id=139-0555439-1135044; session-id-time=208278
 cookie13 = u'skin=noskin; session-id=146-2270052-3256036; session-id-time=2082787201l; csm-hit=FMSCJX98SDQQQZ1V07FA+s-FMSCJX98SDQQQZ1V07FA|1494132529029; JSESSIONID=A13E6D95AF4D514F37321D139EC6D21F; x-wl-uid=1szHHNpYJAZb2W4iuNTvP9u142RfYeatWPzL3OTs5Ux9xsLA+r7nx5gFyXmWTBE/v466vBUMpADM=; ubid-main=130-1255486-1291757; session-token=mYUl77/gao/GkJy4BCUspM0Zu6B9DwRUy5BaGF00WUS5Ix2seLyy5XR6yBOjsFqP4Syc/c1OmZnwtLFidb9OxzNAMFqd9B/yXKHwTXiZJquCTetj0xEV5qy6CBQTheWAzHKHSBqAKCli3qJCZm7UaBWEm4gy05KgdGRmURWpjCe/v+OCBVm0BypnRDxApk4gQuHYQXBKM0u/Ny2vkZr//Hp8DwKQavsF/6C4OE3yHuhqlo/NwjqLKnpZDf5bG7tL'
 cookie14 = u'skin=noskin; session-id=138-2565905-6614804; session-id-time=2082787201l; csm-hit=BJF3HHQZ5HFF3X0QX2SH+s-BJF3HHQZ5HFF3X0QX2SH|1494133695772; JSESSIONID=50A782AAE97FC624D03F2CBC35ABA62E; x-wl-uid=1mJ0rTWxFEX/FSWPUVBC8Br6Hi0Y7nh+pgVDAj/uYErMepKw1DYR4G0pdEIPxPrgB6XY8N1VSlik=; ubid-main=132-5926404-4962703; session-token=FMWStKOyaPGXgyy2TgiMtKclfw+aMEfnw+iU3eWv+lGD3XW278kEyc/LnnLMpJIyA6UE1v0c/QAYzyCk3Mdb6R7j8Nbl+HunVmnTXUMU8JPwxhmc55vMgpX1ThR1p2av2h/0GDvHZjQ3cKsikl0W1+/1gatqh6Vo9ApZuQwemMJZv59HrrzYgo93zYU0ygncDLAfd+ztr5f4B7RAU7moKOnvwHcWReTyJaM1EPwhfnzIGwedNKdYaBcAA0zZDh4t'
 
+proxies = { "http": "http://183.1.86.235:8118",}
+
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:53.0) Gecko/20100101 Firefox/53.0',
+    'X-Forwarded-For': '::ffff:' + str(random.randint(11, 170)) + u'.' + str(random.randint(1, 254)) + u'.' + str(random.randint(1,254)) + u'.' + str(random.randint(1, 254)),
+    'X-Forwarded-Protocol': '',
     'Cookie': u'cookie' + str(random.randint(1, 14)),
 }
 
@@ -60,25 +64,27 @@ def insert_product_list(product_name, product_url, page_sum_number, page_current
     except Exception as e:
         Log.log('insert:', e)
         Log.log('insert:', product_name, product_url, page_sum_number, page_current_number, category_path)
-        insert_error(product_url)
+        insert_error(product_url, e)
         pass
 
-def insert_error(product_url):
+
+def insert_error(product_url, reason):
     conn = sqlite3.connect(db_path)
     sql_insert = '''
     INSERT INTO
-        'error' ('error_url')
+        'error' (error_url, reason)
     VALUES
-        (?);
+        (?, ?);
     '''
     try:
-        conn.execute(sql_insert, (product_url,))
+        conn.execute(sql_insert, (product_url, reason))
         conn.commit()
         conn.close()
     except Exception as e:
         Log.log('insert:', e)
         Log.log('insert errors:')
         pass
+
 
 def cached_url(dictionary_name, url, category_path, page_number):  # 把网页下载下来，目录和明细分开存放，依据dictionary_name的值判断
     path = os.path.join(dictionary_name, category_path + u'_' + str(page_number) + u'.html')
@@ -93,40 +99,45 @@ def cached_url(dictionary_name, url, category_path, page_number):  # 把网页�
 
 
 def page_from_url(dictionary_name, url, category_path, page_number):
-    page = cached_url(dictionary_name, url, category_path, page_number)
-    if os.path.getsize(os.path.join(dictionary_name, category_path + u'_' + str(page_number) + u'.html'))<10000:
-        Log.log('html < 10K')
-        os.remove(os.path.join(dictionary_name, category_path + u'_' + str(page_number) + u'.html'))
-        sleep(random.randint(90, 180))
-        page = cached_url(dictionary_name, url, category_path, page_number)  # 爬回的页面小于10k是Amazon反爬虫页面，sleep3分钟后删掉重新下载页面
-    root = html.fromstring(page)
-    page_list_div = root.xpath(
-        '//a[@class="a-link-normal s-access-detail-page  s-color-twister-title-link a-text-normal"]')
-    page_current = root.xpath('//span[@class="pagnCur"]')
-    # page_total = root.xpath('//span[@class="pagnDisabled"]')  # 有的页面没有总页数这个字段，先不采用这个字段先
-    page_next_url = root.xpath('//a[@id="pagnNextLink"]/@href')
-    # print(page_current[0].text, page_total[0].text, page_next_url[0])
-    if page_next_url:  # 最末尾页没有next_url
-        for p in page_list_div:
-            try:
-                page_content = p.xpath('./@*')
-                insert_product_list(page_content[1], page_content[2], None, int(page_current[0].text), category_path)
-            except Exception as e:
-                Log.log('log1:', len(page_content), len(page_current))
-                Log.log('log1 conditons:', url, category_path, page_number)
-        page_next_url = root_url + page_next_url[0]  # 转换为完整的url格式http://www.amazon.com/dfdfdfdsf/dfldfj
+    path = os.path.join(dictionary_name, category_path + u'_' + str(page_number) + u'.html')
+    if os.path.exists(path):  # amazon会进行反爬虫，所以第二次爬的时候对已经爬过的做判断。
+        pass
     else:
-        for p in page_list_div:
-            try:
-                page_content = p.xpath('./@*')
-                # print(page_content[1], page_content[2])  # product对应的名称和url
-                insert_product_list(page_content[1], page_content[2], None, int(page_current[0].text), category_path)
-            except Exception as e:
-                Log.log('log2:', len(page_content), len(page_current))
-                Log.log('log2 conditionurl', url, category_path, page_number)
-                pass
-        page_next_url = ''
-    return page_next_url
+        page = cached_url(dictionary_name, url, category_path, page_number)
+        while os.path.getsize(os.path.join(dictionary_name, category_path + u'_' + str(page_number) + u'.html')) < 10000:
+            Log.log(u'html<10K:', url)
+            insert_error(url, str('html<10k'))
+            os.remove(os.path.join(dictionary_name, category_path + u'_' + str(page_number) + u'.html'))
+            sleep(random.randint(180, 300))
+            page = cached_url(dictionary_name, url, category_path, page_number)  # 爬回的页面小于10k是Amazon反爬虫页面，sleep3分钟后删掉重新下载页面
+        root = html.fromstring(page)
+        page_list_div = root.xpath(
+            '//a[@class="a-link-normal s-access-detail-page  s-color-twister-title-link a-text-normal"]')
+        page_current = root.xpath('//span[@class="pagnCur"]')
+        # page_total = root.xpath('//span[@class="pagnDisabled"]')  # 有的页面没有总页数这个字段，先不采用这个字段先
+        page_next_url = root.xpath('//a[@id="pagnNextLink"]/@href')
+        # print(page_current[0].text, page_total[0].text, page_next_url[0])
+        if page_next_url:  # 最末尾页没有next_url
+            for p in page_list_div:
+                try:
+                    page_content = p.xpath('./@*')
+                    insert_product_list(page_content[1], page_content[2], None, int(page_current[0].text), category_path)
+                except Exception as e:
+                    Log.log('log1:', len(page_current))
+                    Log.log('log1 conditons:', url, category_path, page_number)
+            page_next_url = root_url + page_next_url[0]  # 转换为完整的url格式http://www.amazon.com/dfdfdfdsf/dfldfj
+        else:
+            for p in page_list_div:
+                try:
+                    page_content = p.xpath('./@*')
+                    # print(page_content[1], page_content[2])  # product对应的名称和url
+                    insert_product_list(page_content[1], page_content[2], None, int(page_current[0].text), category_path)
+                except Exception as e:
+                    Log.log('log2:', len(page_current))
+                    Log.log('log2 conditionurl', url, category_path, page_number)
+                    pass
+            page_next_url = ''
+        return page_next_url
 
 
 def main():
@@ -141,11 +152,11 @@ def main():
             try:
                 page_next_url = page_from_url('product_page_list', page_next_url,
                                               end_of_category_url[e][1], page_number)
-            except Exception as e:
-                Log.log('main:', e)
+            except Exception as E:
+                Log.log('main:', E)
                 Log.log('log:', page_next_url, end_of_category_url[e][1], page_number)
                 pass
-            # sleep(random.randint(2, 11))
+                # sleep(random.randint(2, 11))
 
 
 if __name__ == '__main__':
