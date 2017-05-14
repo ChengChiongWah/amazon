@@ -1,3 +1,5 @@
+# coding:utf-8
+# 对每一个子目录包含的商品明细遍历下载，如果有多页则每一页遍历下载，返回商品的url
 import requests, sqlite3, os, random
 from time import sleep
 from lxml import html
@@ -18,7 +20,7 @@ cookie12 = u'skin=noskin; session-id=139-0555439-1135044; session-id-time=208278
 cookie13 = u'skin=noskin; session-id=146-2270052-3256036; session-id-time=2082787201l; csm-hit=FMSCJX98SDQQQZ1V07FA+s-FMSCJX98SDQQQZ1V07FA|1494132529029; JSESSIONID=A13E6D95AF4D514F37321D139EC6D21F; x-wl-uid=1szHHNpYJAZb2W4iuNTvP9u142RfYeatWPzL3OTs5Ux9xsLA+r7nx5gFyXmWTBE/v466vBUMpADM=; ubid-main=130-1255486-1291757; session-token=mYUl77/gao/GkJy4BCUspM0Zu6B9DwRUy5BaGF00WUS5Ix2seLyy5XR6yBOjsFqP4Syc/c1OmZnwtLFidb9OxzNAMFqd9B/yXKHwTXiZJquCTetj0xEV5qy6CBQTheWAzHKHSBqAKCli3qJCZm7UaBWEm4gy05KgdGRmURWpjCe/v+OCBVm0BypnRDxApk4gQuHYQXBKM0u/Ny2vkZr//Hp8DwKQavsF/6C4OE3yHuhqlo/NwjqLKnpZDf5bG7tL'
 cookie14 = u'skin=noskin; session-id=138-2565905-6614804; session-id-time=2082787201l; csm-hit=BJF3HHQZ5HFF3X0QX2SH+s-BJF3HHQZ5HFF3X0QX2SH|1494133695772; JSESSIONID=50A782AAE97FC624D03F2CBC35ABA62E; x-wl-uid=1mJ0rTWxFEX/FSWPUVBC8Br6Hi0Y7nh+pgVDAj/uYErMepKw1DYR4G0pdEIPxPrgB6XY8N1VSlik=; ubid-main=132-5926404-4962703; session-token=FMWStKOyaPGXgyy2TgiMtKclfw+aMEfnw+iU3eWv+lGD3XW278kEyc/LnnLMpJIyA6UE1v0c/QAYzyCk3Mdb6R7j8Nbl+HunVmnTXUMU8JPwxhmc55vMgpX1ThR1p2av2h/0GDvHZjQ3cKsikl0W1+/1gatqh6Vo9ApZuQwemMJZv59HrrzYgo93zYU0ygncDLAfd+ztr5f4B7RAU7moKOnvwHcWReTyJaM1EPwhfnzIGwedNKdYaBcAA0zZDh4t'
 
-proxies = { "http": "http://183.1.86.235:8118",}
+proxies = { "https": "https://52.34.132.230:3128",}
 
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:53.0) Gecko/20100101 Firefox/53.0',
@@ -108,8 +110,8 @@ def page_from_url(dictionary_name, url, category_path, page_number):
             Log.log(u'html<10K:', url)
             insert_error(url, str('html<10k'))
             os.remove(os.path.join(dictionary_name, category_path + u'_' + str(page_number) + u'.html'))
-            sleep(random.randint(180, 300))
-            page = cached_url(dictionary_name, url, category_path, page_number)  # 爬回的页面小于10k是Amazon反爬虫页面，sleep3分钟后删掉重新下载页面
+            sleep(600)
+            page = cached_url(dictionary_name, url, category_path, page_number)  # 爬回的页面小于10k是Amazon反爬虫页面，sleep10分钟小时后删掉重新下载页面
         root = html.fromstring(page)
         page_list_div = root.xpath(
             '//a[@class="a-link-normal s-access-detail-page  s-color-twister-title-link a-text-normal"]')

@@ -1,3 +1,5 @@
+# coding:utf-8
+# 把Software目录下的各个子目录明细遍历下载，返回每一个子目录的目录明细，只有最末尾那一层才是包含商品页的url
 import requests, sqlite3, os, random
 from time import sleep
 from lxml import html
@@ -30,9 +32,6 @@ def insert_category(category_name, category_path, category_url, end_of_category,
     VALUES
         (?, ?, ?, ?, ?, ?);
     '''
-    # 参数拼接要用 ?，execute 中的参数传递必须
-    # 是一个 tuple 类型
-    # print(type(category_name), type(category_path), type(category_url), type(end_of_category), type(previous_level_category), type(access))
     try:
         conn.execute(sql_insert, (category_name, category_path, category_url[0], end_of_category, previous_level_category, access))
         conn.commit()
@@ -85,19 +84,6 @@ def update(end_of_category, access, previous_level_category):
     conn.execute(sql_update, (end_of_category, access, previous_level_category))
     conn.commit()
     conn.close()
-
-
-class Amazon(object):
-    def __init__(self):
-        self.brand = ''  # 品牌<a id="brand" class="a-link-normal" href=".....">Wall Pops</a>
-        self.title = ''  # 标题      < span id = "productTitle"  class ="a-size-large" >    Wall.....    < / span >
-        self.star = ''  # 星级评分
-        self.reviews = ''  # 用户评论
-        self.answers_questions = ''  # 问答
-        self.price = ''  # 价格  <span id="priceblock_ourprice" class="a-size-medium a-color-price">$13.32</span>
-        self.seller = ''  # 卖家
-        self.ASIN = ''  # ASIN编码
-        self.Best_seller_rank = ''  # 卖家排名
 
 
 def cached_url(dictionary_name, url, category_path):  # 把网页下载下来，目录和明细分开存放，依据dictionary_name的值判断
