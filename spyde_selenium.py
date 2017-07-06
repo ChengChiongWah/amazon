@@ -1,5 +1,9 @@
 # coding:utf-8
 # 根据返回的商品url，下载并抓取商品信息。
+from selenium import webdriver
+
+# coding:utf-8
+# 根据返回的商品url，下载并抓取商品信息。
 import requests, sqlite3, os, random
 from lxml import html
 from log import Log
@@ -98,10 +102,13 @@ def cached_url(dictionary_name, url, category_path, i):  # 把网页下载下来
         with open(path, 'rb') as f:
             return f.read()
     else:
-        r = requests.get(url, headers=headers)
-        with open(path, 'wb') as f:
-            f.write(r.content)
-    return r.content
+        browser = webdriver.Edge()
+        browser.get(url)
+        with open('test.html', 'wb') as f:
+            f.write(bytes(browser.page_source, encoding='utf-8'))
+            f.close()
+        browser.quit()
+    return browser.page_source
 
 
 def detail_from_url(dictionary_name, url, category_path, product_name, id):
@@ -176,3 +183,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
